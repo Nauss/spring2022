@@ -1,0 +1,15 @@
+{
+  "name": "spring2022",
+  "version": "1.0.0",
+  "description": "My CodinGame Spring 2022 bot",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild index.ts --bundle --outfile=result.js --format=cjs",
+    "dev": "npm run build -- --watch"
+  },
+  "author": "Bruno Pommier",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.14.38"
+  }
+}
