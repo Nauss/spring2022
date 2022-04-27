@@ -1,4 +1,5 @@
 import { moveAttacker } from './Attacker'
+import { moveCatapulter } from './Catapulter'
 import { attacker, defender, libero, ranges } from './constants'
 import { moveDefender } from './Defender'
 import Hero from './Hero'
@@ -59,12 +60,19 @@ class Game {
 
   play() {
     this.sortSpiders()
-    moveDefender(this, this.heroes[defender.index])
-    // // If there is an enemy in the base, the libero becomes defender
-    // if (this.enemies.some(enemy => enemy.distance < 5666))
-    //   moveDefender(this, this.heroes[libero.index])
-    moveLibero(this, this.heroes[libero.index])
-    moveAttacker(this, this.heroes[attacker.index])
+    if (this.mana < 150) {
+      moveDefender(this, this.heroes[defender.index])
+      // // If there is an enemy in the base, the libero becomes defender
+      // if (this.enemies.some(enemy => enemy.distance < 5666))
+      //   moveDefender(this, this.heroes[libero.index])
+      moveLibero(this, this.heroes[libero.index])
+      moveLibero(this, this.heroes[attacker.index])
+    } else {
+      moveDefender(this, this.heroes[defender.index])
+      // moveCatapulter(this, this.heroes[defender.index])
+      moveCatapulter(this, this.heroes[libero.index])
+      moveCatapulter(this, this.heroes[attacker.index])
+    }
   }
 
   castSpell(spell: string, ...options: any[]) {
