@@ -55,8 +55,8 @@ class Game {
   play() {
     this.sortSpiders()
     moveDefender(this, this.heroes[defender.index])
-    moveDefender(this, this.heroes[libero.index])
-    // moveLibero(this, this.heroes[libero.index])
+    // moveDefender(this, this.heroes[libero.index])
+    moveLibero(this, this.heroes[libero.index])
     moveAttacker(this, this.heroes[attacker.index])
   }
 

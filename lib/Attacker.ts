@@ -34,7 +34,7 @@ export const moveAttacker = (game: Game, hero: Hero) => {
         spider.shieldLife === 0 &&
         spider.threatFor !== 2 &&
         spiderDistance <= ranges.control &&
-        game.mana >= 20 &&
+        game.mana >= 40 &&
         spiderToEnemy < 8500
       ) {
         game.castSpell('CONTROL', spider.id, game.enemyBase.x, game.enemyBase.y)
@@ -53,18 +53,19 @@ export const moveAttacker = (game: Game, hero: Hero) => {
       if (
         spider.threatFor === 2 &&
         spiderToEnemyBase < 5500 &&
-        game.mana >= 10 &&
+        game.mana >= 50 &&
         spider.isControlled === 0 &&
         spider.shieldLife === 0
       )
         if (spiderDistance <= ranges.shield) {
           game.castSpell('SHIELD', spider.id)
           return true
-        } else {
-          // Go towards the spider
-          game.move(spider.position, 'Attacker spider control')
-          return true
         }
+      // else {
+      //   // Go towards the spider
+      //   game.move(spider.position, 'Attacker spider control')
+      //   return true
+      // }
     })
   ) {
     return
@@ -75,14 +76,15 @@ export const moveAttacker = (game: Game, hero: Hero) => {
     game.spiders.some(spider => {
       const spiderDistance = computeDistance(hero.position, spider.position)
       const spiderToEnemy = computeDistance(game.enemyBase, spider.position)
-      if (spider.shieldLife === 0 && game.mana >= 20 && spiderToEnemy < 8500) {
+      if (spider.shieldLife === 0 && game.mana >= 30 && spiderToEnemy < 8500) {
         if (spiderDistance <= ranges.wind) {
           game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
           return true
-        } else {
-          game.move(spider.position, 'Attacker spider wind')
-          return true
         }
+        //  else {
+        //   game.move(spider.position, 'Attacker spider wind')
+        //   return true
+        // }
       }
     })
   ) {
@@ -122,28 +124,30 @@ export const moveAttacker = (game: Game, hero: Hero) => {
   // }
 
   // Otherwise move towards the closest spider on the enemy side
-  // if (game.spiders.length) {
-  //   let closest
-  //   let closestDistance = Number.POSITIVE_INFINITY
-  //   game.spiders.forEach(spider => {
-  //     const spiderDistance = computeDistance(hero.position, spider.position)
-  //     const spiderToEnemyBaseDistance = computeDistance(
-  //       spider.position,
-  //       game.enemyBase
-  //     )
-  //     if (
-  //       spiderToEnemyBaseDistance < 10000 &&
-  //       spiderDistance < closestDistance
-  //     ) {
-  //       closest = spider
-  //       closestDistance = spiderDistance
-  //     }
-  //   })
-  //   if (closest) {
-  //     game.move(closest.position)
-  //     return true
-  //   }
-  // }
+  if (game.spiders.length) {
+    let closest
+    let closestDistance = Number.POSITIVE_INFINITY
+    game.spiders.forEach(spider => {
+      const spiderDistance = computeDistance(hero.position, spider.position)
+      const spiderToEnemyBaseDistance = computeDistance(
+        spider.position,
+        game.enemyBase
+      )
+      if (
+        spider.threatFor !== 2 &&
+        spider.enemyBaseDistance > 5200 &&
+        spider.enemyBaseDistance < 8500 &&
+        spider.enemyBaseDistance < closestDistance
+      ) {
+        closest = spider
+        closestDistance = spider.enemyBaseDistance
+      }
+    })
+    if (closest) {
+      game.move(closest.position, 'Attacker to closest')
+      return true
+    }
+  }
 
   // Always move to the enemy base
   if (hero.enemyBaseDistance > 4500) {

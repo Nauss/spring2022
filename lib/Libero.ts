@@ -26,22 +26,30 @@ export const moveLibero = (game: Game, hero: Hero) => {
   //   return
   // }
   // Control the mid-range spiders
-  TODO
   if (
     game.canAttack &&
-    game.mana >= 50 &&
+    game.mana >= 40 &&
     game.spiders.some(spider => {
       const spiderDistance = computeDistance(hero.position, spider.position)
-      const spiderToEnemy = computeDistance(game.enemyBase, spider.position)
       if (
+        spider.distance > 5000 &&
         spider.isControlled === 0 &&
         spider.shieldLife === 0 &&
-        spider.threatFor !== 2 &&
-        spiderDistance <= ranges.control &&
-        spiderToEnemy < 8500
+        spider.threatFor === 1
       ) {
-        game.castSpell('CONTROL', spider.id, game.enemyBase.x, game.enemyBase.y)
-        return true
+        if (spiderDistance <= ranges.control) {
+          game.castSpell(
+            'CONTROL',
+            spider.id,
+            game.enemyBase.x,
+            game.enemyBase.y
+          )
+          return true
+        } else {
+          game.move(spider.position, 'Libero')
+
+          return true
+        }
       }
     })
   ) {
@@ -59,27 +67,37 @@ export const moveLibero = (game: Game, hero: Hero) => {
       return 0
     })
   const threats = sorted.filter(({ threat }) => threat > 0)
-  // Move to second closest threat
-  // (The defender will move to the closest threat)
-  if (threats.length > 1) {
-    const closest = threats[1]
-    if (closest.liberoDistance <= ranges.wind && game.mana >= 30) {
+  // Move to the closest threat if at least 3 threats
+  if (threats.length > 2) {
+    const closest = threats[0]
+    if (
+      closest.shieldLife === 0 &&
+      closest.liberoDistance <= ranges.wind &&
+      game.mana >= 30 &&
+      closest.distance < 5000
+    ) {
       game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
       return
     }
-    console.log('MOVE', closest.position.x, closest.position.y, 'Libero')
+    game.move(closest.position, 'Libero')
     return
   }
-  if (sorted.length) {
-    const closest = sorted[0]
-    console.log('MOVE', closest.position.x, closest.position.y, 'Libero')
+
+  if (
+    sorted.some(spider => {
+      if (spider.distance > 5000 && spider.threatFor !== 2) {
+        console.log('MOVE', spider.position.x, spider.position.y, 'Libero')
+        return true
+      }
+    })
+  ) {
     return
   }
 
   // Otherwise move towards the closest spider
-  if (game.moveToClosestSpider(hero)) {
-    return
-  }
+  // if (game.moveToClosestSpider(hero)) {
+  //   return
+  // }
 
   // Go explore
   const isTopLeft = game.base.x === 0

@@ -20,8 +20,8 @@ export const moveDefender = (game: Game, hero: Hero) => {
         shieldLife === 0 &&
         spiderDistance <= ranges.wind &&
         game.mana >= 10 &&
-        health > 4 &&
-        distance < 2500
+        health > 6 &&
+        distance < 3500
       ) {
         game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
         return true
@@ -34,19 +34,19 @@ export const moveDefender = (game: Game, hero: Hero) => {
     return
   }
   // Shield if enemy close by
-  if (
-    hero.shieldLife === 0 &&
-    game.mana >= 30 &&
-    game.enemies.some(enemy => {
-      const enemyDistance = computeDistance(hero.position, enemy.position)
-      if (enemyDistance <= ranges.wind || enemyDistance <= ranges.control) {
-        game.castSpell('SHIELD', hero.id)
-        return true
-      }
-    })
-  ) {
-    return
-  }
+  // if (
+  //   hero.shieldLife === 0 &&
+  //   game.mana >= 30 &&
+  //   game.enemies.some(enemy => {
+  //     const enemyDistance = computeDistance(hero.position, enemy.position)
+  //     if (enemyDistance <= ranges.wind || enemyDistance <= ranges.control) {
+  //       game.castSpell('SHIELD', hero.id)
+  //       return true
+  //     }
+  //   })
+  // ) {
+  //   return
+  // }
 
   // Otherwise move towards the closest spider
   if (game.moveToClosestSpider(hero)) {
