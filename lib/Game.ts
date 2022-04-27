@@ -1,5 +1,5 @@
 import { moveAttacker } from './Attacker'
-import { attacker, defender, libero } from './constants'
+import { attacker, defender, libero, ranges } from './constants'
 import { moveDefender } from './Defender'
 import Hero from './Hero'
 import { moveLibero } from './Libero'
@@ -12,10 +12,15 @@ class Game {
   base: Position
   enemyBase: Position
   canAttack: boolean = false
+  enemiesInBase: number = 0
+  enemiesInEnemyBase: number = 0
 
   spiders: Spider[] = []
   heroes: Hero[] = []
   enemies: Hero[] = []
+
+  previousHeroes: Hero[] = []
+  nextMove: { [hero: number]: any } = {}
 
   static instance: Game
 
@@ -55,7 +60,9 @@ class Game {
   play() {
     this.sortSpiders()
     moveDefender(this, this.heroes[defender.index])
-    // moveDefender(this, this.heroes[libero.index])
+    // // If there is an enemy in the base, the libero becomes defender
+    // if (this.enemies.some(enemy => enemy.distance < 5666))
+    //   moveDefender(this, this.heroes[libero.index])
     moveLibero(this, this.heroes[libero.index])
     moveAttacker(this, this.heroes[attacker.index])
   }
@@ -84,7 +91,7 @@ class Game {
           closestDistance = spiderDistance
         }
       })
-      if (closestDistance < 2500) {
+      if (closestDistance < 3500) {
         this.move(closest.position)
         return true
       }
@@ -92,8 +99,70 @@ class Game {
     return false
   }
 
+  avoidSpiders(hero: Hero) {
+    if (this.spiders.length) {
+      const isTopLeft = this.base.x === 0
+      if (
+        this.spiders.some(spider => {
+          let distance = computeDistance(hero.position, spider.position)
+          if (spider.threatFor === 2 && distance < 800) {
+            const deltaX = isTopLeft ? 600 : -600
+            const deltaY = isTopLeft ? 600 : -600
+            this.move({
+              x: spider.position.x + deltaX,
+              y: spider.position.y + deltaY,
+            })
+            return true
+          }
+        })
+      ) {
+        return true
+      }
+    }
+    return false
+  }
+
+  stayInBase(hero: Hero) {
+    let distance = computeDistance(this.base, hero.position)
+    if (this.canAttack && distance > 5500) {
+      this.move({
+        x: this.base.x,
+        y: this.base.y,
+      })
+      return true
+    }
+    return false
+  }
+
+  uncontrol(hero: Hero) {
+    // Uncontrol when the hero was controlled but is not anymore
+    if (this.previousHeroes.length) {
+      const previous = this.previousHeroes.find(h => h.id === hero.id)
+      if (
+        previous &&
+        previous.isControlled &&
+        !hero.isControlled &&
+        this.mana >= 20
+      ) {
+        this.castSpell('SHIELD', hero.id)
+        return true
+      }
+    }
+    return false
+  }
+
+  stayShieled(hero: Hero) {
+    if (this.mana > 30 && this.enemiesInBase && hero.shieldLife === 0) {
+      this.castSpell('SHIELD', hero.id)
+      return true
+    }
+
+    return false
+  }
+
   resetEntities() {
     this.spiders = []
+    this.previousHeroes = this.heroes
     this.heroes = []
     this.enemies = []
   }

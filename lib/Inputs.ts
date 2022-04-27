@@ -58,7 +58,7 @@ class Inputs {
       }
       switch (entity.type) {
         case 0:
-          if (entity.health >= 19) {
+          if (entity.health >= 16) {
             game.canAttack = true
           }
           game.spiders.push(new Spider(entity))
@@ -72,6 +72,10 @@ class Inputs {
         default:
           throw 'Wrong type'
       }
+      game.enemiesInBase = game.enemies.filter(e => e.distance < 5400).length
+      game.enemiesInEnemyBase = game.enemies.filter(
+        e => e.enemyBaseDistance < 5400
+      ).length
     }
   }
 }

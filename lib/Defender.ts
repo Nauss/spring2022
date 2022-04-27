@@ -4,6 +4,12 @@ import Hero from './Hero'
 import { computeDistance, random } from './utils'
 
 export const moveDefender = (game: Game, hero: Hero) => {
+  if (game.stayShieled(hero)) {
+    return
+  }
+  if (game.stayInBase(hero)) {
+    return
+  }
   // Defend
   const spidersByDistance = [...game.spiders].sort((a, b) => {
     if (a.distance < b.distance) return -1
@@ -11,6 +17,8 @@ export const moveDefender = (game: Game, hero: Hero) => {
     return 0
   })
   // Threat first
+  // At least 3 threats for wind
+  let nbThreats = 0
   const threatSpiders = spidersByDistance.filter(({ threat }) => threat > 0)
   if (
     threatSpiders.some(spider => {
@@ -23,8 +31,11 @@ export const moveDefender = (game: Game, hero: Hero) => {
         health > 6 &&
         distance < 3500
       ) {
-        game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
-        return true
+        nbThreats++
+        if (nbThreats >= 3 || distance < 2500) {
+          game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
+          return true
+        }
       } else {
         game.move(position, 'Defender')
         return true
@@ -32,6 +43,9 @@ export const moveDefender = (game: Game, hero: Hero) => {
     })
   ) {
     return
+  } else if (nbThreats) {
+    game.move(threatSpiders[0].position, 'Defender')
+    return true
   }
   // Shield if enemy close by
   // if (
