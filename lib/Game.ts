@@ -1,6 +1,7 @@
 import { moveAttacker } from './Attacker'
 import { attacker, defender, libero, ranges } from './constants'
 import { moveDefender } from './Defender'
+import { moveFarmer } from './Farmer'
 import Hero from './Hero'
 import { moveLibero } from './Libero'
 import Spider from './Spider'
@@ -41,7 +42,7 @@ class Game {
 
   sortSpiders() {
     // Assign threat level between 0 and 1000
-    this.spiders.forEach(spider => {
+    this.spiders.forEach((spider) => {
       spider.threat = 0
       if (spider.nearBase && spider.threatFor === 1) spider.threat = 800
       else if (spider.threatFor === 1) spider.threat = 400
@@ -59,12 +60,15 @@ class Game {
 
   play() {
     this.sortSpiders()
-    moveDefender(this, this.heroes[defender.index])
+    // moveDefender(this, this.heroes[defender.index])
     // // If there is an enemy in the base, the libero becomes defender
     // if (this.enemies.some(enemy => enemy.distance < 5666))
     //   moveDefender(this, this.heroes[libero.index])
-    moveLibero(this, this.heroes[libero.index])
-    moveAttacker(this, this.heroes[attacker.index])
+    // moveLibero(this, this.heroes[libero.index])
+    // moveAttacker(this, this.heroes[attacker.index])
+    moveFarmer(this, this.heroes[defender.index])
+    moveFarmer(this, this.heroes[libero.index])
+    moveFarmer(this, this.heroes[attacker.index])
   }
 
   castSpell(spell: string, ...options: any[]) {
@@ -84,7 +88,7 @@ class Game {
     if (this.spiders.length) {
       let closest = this.spiders[0]
       let closestDistance = computeDistance(hero.position, closest.position)
-      this.spiders.forEach(spider => {
+      this.spiders.forEach((spider) => {
         const spiderDistance = computeDistance(hero.position, spider.position)
         if (spiderDistance < closestDistance) {
           closest = spider
@@ -103,7 +107,7 @@ class Game {
     if (this.spiders.length) {
       const isTopLeft = this.base.x === 0
       if (
-        this.spiders.some(spider => {
+        this.spiders.some((spider) => {
           let distance = computeDistance(hero.position, spider.position)
           if (spider.threatFor === 2 && distance < 800) {
             const deltaX = isTopLeft ? 600 : -600
@@ -137,7 +141,7 @@ class Game {
   uncontrol(hero: Hero) {
     // Uncontrol when the hero was controlled but is not anymore
     if (this.previousHeroes.length) {
-      const previous = this.previousHeroes.find(h => h.id === hero.id)
+      const previous = this.previousHeroes.find((h) => h.id === hero.id)
       if (
         previous &&
         previous.isControlled &&
