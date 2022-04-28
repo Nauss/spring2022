@@ -30,13 +30,15 @@ export const moveLibero = (game: Game, hero: Hero) => {
   }
   // Control a hero getting to close to base
   if (
-    game.mana >= 70 &&
+    game.mana >= 50 &&
     game.enemies.some(h => {
       if (h.isControlled !== 0 || h.shieldLife !== 0) return false
       const enemyToHeroDistance = computeDistance(h.position, hero.position)
-      if (enemyToHeroDistance <= ranges.control && h.distance < 5500) {
-        game.castSpell('CONTROL', h.id, game.enemyBase.x, game.enemyBase.y)
-        game.nextMove[h.id] = { spell: 'CONTROL', target: h }
+      if (enemyToHeroDistance <= ranges.wind && h.distance < 5500) {
+        game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
+        game.nextMove[h.id] = { spell: 'WIND', target: game.enemyBase }
+        // game.castSpell('CONTROL', h.id, game.enemyBase.x, game.enemyBase.y)
+        // game.nextMove[h.id] = { spell: 'CONTROL', target: h }
         return true
       } else if (
         // Too far to cast spell > move towards the enemy
@@ -126,7 +128,8 @@ export const moveLibero = (game: Game, hero: Hero) => {
     })
   const threats = sorted.filter(({ threat }) => threat > 0)
   // Move to the closest threat if at least 3 threats
-  if (threats.length > 2) {
+  const enemyInBase = game.enemies.find(e => e.distance < 5000)
+  if (threats.length > 2 || (threats.length > 0 && enemyInBase)) {
     const closest = threats[0]
     if (
       closest.shieldLife === 0 &&
