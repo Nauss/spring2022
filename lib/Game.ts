@@ -1,10 +1,12 @@
 import { moveAttacker } from './Attacker'
-import { attacker, defender, libero, ranges } from './constants'
+import { manaToAttack, ranges } from './constants'
 import { moveDefender } from './Defender'
 import { moveFarmer } from './Farmer'
 import Hero from './Hero'
 import { moveLibero } from './Libero'
+import { movePusher } from './Pusher'
 import Spider from './Spider'
+import Entity from './Entity'
 import { computeDistance, Position } from './utils'
 
 class Game {
@@ -13,6 +15,7 @@ class Game {
   base: Position
   enemyBase: Position
   canAttack: boolean = false
+  hasAttacked: boolean = false
   enemiesInBase: number = 0
   enemiesInEnemyBase: number = 0
 
@@ -21,8 +24,20 @@ class Game {
   enemies: Hero[] = []
 
   previousHeroes: Hero[] = []
-  nextMove: { [hero: number]: any } = {}
+  nextMove: { spell?: string; enemyId?: number } = {}
 
+  static defender = {
+    index: 0,
+    maxDistance: 4500,
+  }
+  static libero = {
+    index: 1,
+    maxDistance: 9000,
+  }
+  static attacker = {
+    index: 2,
+    maxDistance: 90000,
+  }
   static instance: Game
 
   constructor() {
@@ -42,7 +57,7 @@ class Game {
 
   sortSpiders() {
     // Assign threat level between 0 and 1000
-    this.spiders.forEach((spider) => {
+    this.spiders.forEach(spider => {
       spider.threat = 0
       if (spider.nearBase && spider.threatFor === 1) spider.threat = 800
       else if (spider.threatFor === 1) spider.threat = 400
@@ -59,16 +74,40 @@ class Game {
   }
 
   play() {
-    this.sortSpiders()
+    // this.sortSpiders()
     // moveDefender(this, this.heroes[defender.index])
     // // If there is an enemy in the base, the libero becomes defender
     // if (this.enemies.some(enemy => enemy.distance < 5666))
     //   moveDefender(this, this.heroes[libero.index])
     // moveLibero(this, this.heroes[libero.index])
     // moveAttacker(this, this.heroes[attacker.index])
-    moveFarmer(this, this.heroes[defender.index])
-    moveFarmer(this, this.heroes[libero.index])
-    moveFarmer(this, this.heroes[attacker.index])
+    if (this.canAttack) {
+      moveDefender(this, this.heroes[Game.defender.index])
+      moveDefender(this, this.heroes[Game.libero.index])
+      // moveLibero(this, this.heroes[Game.libero.index])
+      // if (this.mana >= 20) {
+      movePusher(
+        this,
+        // this.heroes[Game.libero.index],
+        this.heroes[Game.attacker.index]
+      )
+      // } else {
+      //   this.canAttack = false
+      //   moveFarmer(this, this.heroes[Game.libero.index])
+      //   // moveFarmer(this, this.heroes[Game.attacker.index])
+      // }
+      // movePusher(this, this.heroes[Game.attacker.index])
+    } else {
+      if (this.hasAttacked) {
+        moveDefender(this, this.heroes[Game.defender.index])
+        moveDefender(this, this.heroes[Game.libero.index])
+        moveDefender(this, this.heroes[Game.attacker.index])
+      } else {
+        moveFarmer(this, this.heroes[Game.defender.index])
+        moveFarmer(this, this.heroes[Game.libero.index])
+        moveFarmer(this, this.heroes[Game.attacker.index])
+      }
+    }
   }
 
   castSpell(spell: string, ...options: any[]) {
@@ -80,15 +119,24 @@ class Game {
     console.log(`MOVE`, position.x, position.y, ...options)
   }
 
+  moveToFuture(entity: Entity, ...options: any[]) {
+    console.log(
+      `MOVE`,
+      entity.position.x + entity.vx * 2,
+      entity.position.y + entity.vy * 2,
+      ...options
+    )
+  }
+
   wait(...options: any[]) {
     console.log(`WAIT`, ...options)
   }
 
-  moveToClosestSpider(hero: Hero) {
+  moveToClosestSpider(hero: Hero, ...options: any[]) {
     if (this.spiders.length) {
       let closest = this.spiders[0]
       let closestDistance = computeDistance(hero.position, closest.position)
-      this.spiders.forEach((spider) => {
+      this.spiders.forEach(spider => {
         const spiderDistance = computeDistance(hero.position, spider.position)
         if (spiderDistance < closestDistance) {
           closest = spider
@@ -96,7 +144,7 @@ class Game {
         }
       })
       if (closestDistance < 3500) {
-        this.move(closest.position)
+        this.move(closest.position, ...options)
         return true
       }
     }
@@ -107,7 +155,7 @@ class Game {
     if (this.spiders.length) {
       const isTopLeft = this.base.x === 0
       if (
-        this.spiders.some((spider) => {
+        this.spiders.some(spider => {
           let distance = computeDistance(hero.position, spider.position)
           if (spider.threatFor === 2 && distance < 800) {
             const deltaX = isTopLeft ? 600 : -600
@@ -126,13 +174,16 @@ class Game {
     return false
   }
 
-  stayInBase(hero: Hero) {
+  stayInBase(hero: Hero, ...options: any[]) {
     let distance = computeDistance(this.base, hero.position)
     if (this.canAttack && distance > 5500) {
-      this.move({
-        x: this.base.x,
-        y: this.base.y,
-      })
+      this.move(
+        {
+          x: this.base.x,
+          y: this.base.y,
+        },
+        ...options
+      )
       return true
     }
     return false
@@ -141,7 +192,7 @@ class Game {
   uncontrol(hero: Hero) {
     // Uncontrol when the hero was controlled but is not anymore
     if (this.previousHeroes.length) {
-      const previous = this.previousHeroes.find((h) => h.id === hero.id)
+      const previous = this.previousHeroes.find(h => h.id === hero.id)
       if (
         previous &&
         previous.isControlled &&
@@ -156,7 +207,7 @@ class Game {
   }
 
   stayShieled(hero: Hero) {
-    if (this.mana > 30 && this.enemiesInBase && hero.shieldLife === 0) {
+    if (this.mana > 50 && this.enemiesInBase && hero.shieldLife === 0) {
       this.castSpell('SHIELD', hero.id)
       return true
     }
@@ -169,6 +220,25 @@ class Game {
     this.previousHeroes = this.heroes
     this.heroes = []
     this.enemies = []
+  }
+
+  // Spider stuff
+  inRange(spiders: Spider[], position: Position, range: number) {
+    return spiders.filter(spider => {
+      const distance = computeDistance(position, spider.position)
+      return distance < range
+    }).length
+  }
+  absoluteThreats(spiders: Spider[]) {
+    return spiders.filter(spider => {
+      if (
+        spider.threatFor === 1 &&
+        spider.distance < (400 * spider.health) / 2
+      ) {
+        return true
+      }
+      return false
+    })
   }
 }
 

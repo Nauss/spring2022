@@ -1,13 +1,13 @@
-import { defender, ranges } from './constants'
+import { ranges } from './constants'
 import Game from './Game'
 import Hero from './Hero'
 import { computeDistance, random } from './utils'
 
 export const moveDefender = (game: Game, hero: Hero) => {
-  if (game.stayShieled(hero)) {
-    return
-  }
-  if (game.stayInBase(hero)) {
+  // if (game.stayShieled(hero)) {
+  //   return
+  // }
+  if (game.stayInBase(hero, 'Defender')) {
     return
   }
   // Defend
@@ -19,7 +19,10 @@ export const moveDefender = (game: Game, hero: Hero) => {
   // Threat first
   // At least 3 threats for wind
   let nbThreats = 0
-  const threatSpiders = spidersByDistance.filter(({ threat }) => threat > 0)
+  const threatSpiders = spidersByDistance.filter(
+    ({ threatFor }) => threatFor === 1
+  )
+  const absoluteThreats = game.absoluteThreats(game.spiders)
   if (
     threatSpiders.some(spider => {
       const { position, distance, health, shieldLife } = spider
@@ -27,24 +30,24 @@ export const moveDefender = (game: Game, hero: Hero) => {
       if (
         shieldLife === 0 &&
         spiderDistance <= ranges.wind &&
-        game.mana >= 10 &&
-        health > 6 &&
-        distance < 3500
+        (game.mana >= 40 || absoluteThreats.length) &&
+        (health > 6 || absoluteThreats.length) &&
+        distance < 3000
       ) {
         nbThreats++
-        if (nbThreats >= 3 || distance < 2500) {
+        if (nbThreats >= 3 || absoluteThreats.length) {
           game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
           return true
         }
       } else {
-        game.move(position, 'Defender')
+        game.move(position, 'Defender to wind')
         return true
       }
     })
   ) {
     return
   } else if (nbThreats) {
-    game.move(threatSpiders[0].position, 'Defender')
+    game.move(threatSpiders[0].position, 'Defender to threat')
     return true
   }
   // Shield if enemy close by
@@ -63,19 +66,19 @@ export const moveDefender = (game: Game, hero: Hero) => {
   // }
 
   // Otherwise move towards the closest spider
-  if (game.moveToClosestSpider(hero)) {
+  if (game.moveToClosestSpider(hero, 'Defender closest')) {
     return
   }
   // Go explore
   const isTopLeft = game.base.x === 0
-  let min = isTopLeft ? 0 : game.base.x - defender.maxDistance
-  let max = isTopLeft ? defender.maxDistance : game.base.x
+  let min = isTopLeft ? 0 : game.base.x - Game.defender.maxDistance
+  let max = isTopLeft ? Game.defender.maxDistance : game.base.x
   const x = random({
     min,
     max,
   })
-  min = isTopLeft ? 0 : game.base.y - defender.maxDistance
-  max = isTopLeft ? defender.maxDistance / 2 : game.base.y
+  min = isTopLeft ? 0 : game.base.y - Game.defender.maxDistance
+  max = isTopLeft ? Game.defender.maxDistance / 2 : game.base.y
   const y = random({ min, max })
-  game.move({ x, y }, 'Defender')
+  game.move({ x, y }, 'Defender random')
 }

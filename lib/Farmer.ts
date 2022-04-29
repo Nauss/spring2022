@@ -1,27 +1,27 @@
-import { defender, ranges } from './constants'
+import { ranges } from './constants'
 import Game from './Game'
 import Hero from './Hero'
-import { computeDistance, random } from './utils'
+import { computeDistance, random, randomPointOnCircle } from './utils'
 
 const farmPositions = {
   topLeft: {
     0: {
-      x: 7000,
-      y: 2000,
+      x: 6500,
+      y: 1500,
     },
     1: {
       x: 5500,
       y: 4000,
     },
     2: {
-      x: 2000,
-      y: 7000,
+      x: 1500,
+      y: 6500,
     },
   },
   bottomRight: {
     0: {
       x: 11000,
-      y: 7000,
+      y: 6500,
     },
     1: {
       x: 12000,
@@ -34,27 +34,85 @@ const farmPositions = {
   },
 }
 export const moveFarmer = (game: Game, hero: Hero) => {
-  // Go to closest spider
-  const byDistance = game.spiders
-    .map((spider) => {
-      const distance = computeDistance(hero.position, spider.position)
-      return { spider, distance }
-    })
+  // Control if possible
+  // let nb = 3
+  // if (
+  //   hero.id === 0 &&
+  //   game.mana >= 10 &&
+  //   game.spiders.some(s => {
+  //     if (
+  //       s.isControlled !== 0 ||
+  //       s.shieldLife !== 0 ||
+  //       s.threatFor === 2 ||
+  //       s.distance < 5000
+  //     ) {
+  //       return false
+  //     }
+  //     nb--
+  //     if (nb === 0) {
+  //       const distance = computeDistance(s.position, hero.position)
+  //       if (distance <= ranges.control && distance > hitDistance) {
+  //         game.castSpell('CONTROL', s.id, game.enemyBase.x, game.enemyBase.y)
+  //         return true
+  //       }
+  //     }
+  //   })
+  // ) {
+  //   return
+  // }
+  const isTopLeft = game.base.x === 0
+  let position = isTopLeft
+    ? farmPositions.topLeft[hero.id]
+    : farmPositions.bottomRight[hero.id]
+  // handle absolute threats with a wind
+  const absoluteThreats = game.absoluteThreats(game.spiders)
+  if (absoluteThreats.length > 0) {
+    const spider = absoluteThreats[0]
+    const spiderDistance = computeDistance(hero.position, spider.position)
+    if (game.mana >= 10 && spiderDistance <= ranges.wind) {
+      game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
+      return
+    }
+  }
+  // Go to closest threat
+  const byBaseDistance = hero.spiders
+    .map(spider => spider)
     .sort((a, b) => {
       if (a.distance < b.distance) return -1
       if (a.distance > b.distance) return 1
       return 0
     })
-    .filter(({ distance }) => distance < 2000)
+    .filter(({ threatFor }) => threatFor === 1)
+  if (byBaseDistance.length) {
+    const closest = byBaseDistance[0]
+    game.moveToFuture(closest, 'Farmer')
+    return
+  }
+
+  // Go to closest spider
+  const byDistance = hero.spiders
+    .map(spider => {
+      let distance = computeDistance(hero.position, spider.position)
+      const toPosition = computeDistance(position, spider.position)
+      if (toPosition > 3500) {
+        return null
+      }
+      return { spider, distance }
+    })
+    .filter(o => o && o.distance < 8500 && o.spider.threatFor !== 2)
+    .sort((a, b) => {
+      if (a.distance < b.distance) return -1
+      if (a.distance > b.distance) return 1
+      return 0
+    })
   if (byDistance.length) {
-    game.move(byDistance[0].spider.position, 'Farmer')
+    const closest = byDistance[0]
+    game.moveToFuture(closest.spider, 'Farmer')
+    return
   } else {
-    const isTopLeft = game.base.x === 0
-    game.move(
-      isTopLeft
-        ? farmPositions.topLeft[hero.id]
-        : farmPositions.bottomRight[hero.id],
-      'Farmer'
-    )
+    // position.x += random({ min: -1100, max: 1100 })
+    // position.y += random({ min: -1100, max: 1100 })
+    game.move(position, 'Farmer')
+    return
   }
 }

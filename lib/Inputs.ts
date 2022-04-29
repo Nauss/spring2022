@@ -1,4 +1,4 @@
-import { positions } from './constants'
+import { manaToAttack, positions } from './constants'
 import Game from './Game'
 import Hero from './Hero'
 import Spider from './Spider'
@@ -32,6 +32,7 @@ class Inputs {
     let inputs = readline().split(' ')
     game.health = parseInt(inputs[0])
     game.mana = parseInt(inputs[1])
+
     // Discard other plater stats for now
     // @ts-ignore-next-line
     inputs = readline().split(' ')
@@ -58,13 +59,15 @@ class Inputs {
       }
       switch (entity.type) {
         case 0:
-          if (entity.health >= 16) {
-            game.canAttack = true
-          }
+          // if (entity.health >= 16) {
+          //   game.canAttack = true
+          // }
           game.spiders.push(new Spider(entity))
           break
         case 1:
-          game.heroes.push(new Hero(entity))
+          let hero = new Hero(entity)
+          hero.id = game.heroes.length
+          game.heroes.push(hero)
           break
         case 2:
           game.enemies.push(new Hero(entity))
@@ -76,6 +79,18 @@ class Inputs {
       game.enemiesInEnemyBase = game.enemies.filter(
         e => e.enemyBaseDistance < 5400
       ).length
+    }
+    game.heroes.forEach(hero => {
+      hero.setSpiders(game.spiders)
+    })
+    const absoluteThreats = game.absoluteThreats(game.spiders)
+    if (
+      (game.mana >= manaToAttack ||
+        (game.hasAttacked && game.mana >= manaToAttack - 40)) &&
+      absoluteThreats.length === 0
+    ) {
+      game.canAttack = true
+      game.hasAttacked = true
     }
   }
 }

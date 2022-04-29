@@ -1,11 +1,11 @@
-import { defender, libero, ranges } from './constants'
+import { ranges } from './constants'
 import Game from './Game'
 import Hero from './Hero'
 import { computeDistance, random } from './utils'
 
 export const moveLibero = (game: Game, hero: Hero) => {
   // Handle next move
-  if (game.nextMove[hero.id]) {
+  if (game.nextMove?.[hero.id]) {
     const { spell, target } = game.nextMove[hero.id]
     if (spell === 'CONTROL') {
       const enemy = game.enemies.find(e => e.id === target)
@@ -65,7 +65,6 @@ export const moveLibero = (game: Game, hero: Hero) => {
         }))
       )
       .filter(({ distance }) => !isNaN(distance))
-    console.error(distances)
     if (
       distances.some(({ distance, position }) => {
         if (distance > 200) return false
@@ -163,17 +162,17 @@ export const moveLibero = (game: Game, hero: Hero) => {
   // Go explore
   const isTopLeft = game.base.x === 0
   let min = isTopLeft
-    ? defender.maxDistance - 1000
-    : game.base.x - libero.maxDistance
+    ? Game.defender.maxDistance - 1000
+    : game.base.x - Game.libero.maxDistance
   let max = isTopLeft
-    ? libero.maxDistance
-    : game.base.x - defender.maxDistance + 1000
+    ? Game.libero.maxDistance
+    : game.base.x - Game.defender.maxDistance + 1000
   const x = random({
     min,
     max,
   })
-  min = isTopLeft ? 0 : game.base.y - libero.maxDistance
-  max = isTopLeft ? libero.maxDistance : game.base.y
+  min = isTopLeft ? 0 : game.base.y - Game.libero.maxDistance
+  max = isTopLeft ? Game.libero.maxDistance : game.base.y
   const y = random({ min, max })
   console.log('MOVE', x, y, 'Libero')
 }
