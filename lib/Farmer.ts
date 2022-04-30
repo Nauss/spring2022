@@ -34,32 +34,6 @@ const farmPositions = {
   },
 }
 export const moveFarmer = (game: Game, hero: Hero) => {
-  // Control if possible
-  // let nb = 3
-  // if (
-  //   hero.id === 0 &&
-  //   game.mana >= 10 &&
-  //   game.spiders.some(s => {
-  //     if (
-  //       s.isControlled !== 0 ||
-  //       s.shieldLife !== 0 ||
-  //       s.threatFor === 2 ||
-  //       s.distance < 5000
-  //     ) {
-  //       return false
-  //     }
-  //     nb--
-  //     if (nb === 0) {
-  //       const distance = computeDistance(s.position, hero.position)
-  //       if (distance <= ranges.control && distance > hitDistance) {
-  //         game.castSpell('CONTROL', s.id, game.enemyBase.x, game.enemyBase.y)
-  //         return true
-  //       }
-  //     }
-  //   })
-  // ) {
-  //   return
-  // }
   const isTopLeft = game.base.x === 0
   let position = isTopLeft
     ? farmPositions.topLeft[hero.id]
@@ -70,13 +44,13 @@ export const moveFarmer = (game: Game, hero: Hero) => {
     const spider = absoluteThreats[0]
     const spiderDistance = computeDistance(hero.position, spider.position)
     if (game.mana >= 10 && spiderDistance <= ranges.wind) {
+      console.error('Farmer wind absolute threat')
       game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y)
       return
     }
   }
   // Go to closest threat
   const byBaseDistance = hero.spiders
-    .map(spider => spider)
     .sort((a, b) => {
       if (a.distance < b.distance) return -1
       if (a.distance > b.distance) return 1
@@ -85,10 +59,10 @@ export const moveFarmer = (game: Game, hero: Hero) => {
     .filter(({ threatFor }) => threatFor === 1)
   if (byBaseDistance.length) {
     const closest = byBaseDistance[0]
+    console.error('Farmer to closest threat')
     game.moveToFuture(closest, 'Farmer')
     return
   }
-
   // Go to closest spider
   const byDistance = hero.spiders
     .map(spider => {
@@ -107,11 +81,13 @@ export const moveFarmer = (game: Game, hero: Hero) => {
     })
   if (byDistance.length) {
     const closest = byDistance[0]
+    console.error('Farmer to closest spider')
     game.moveToFuture(closest.spider, 'Farmer')
     return
   } else {
     // position.x += random({ min: -1100, max: 1100 })
     // position.y += random({ min: -1100, max: 1100 })
+    console.error('Farmer to position', position)
     game.move(position, 'Farmer')
     return
   }

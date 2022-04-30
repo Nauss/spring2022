@@ -13,6 +13,8 @@ class Game {
   health: number
   mana: number
   base: Position
+  enemyHealth: number
+  enemyMana: number
   enemyBase: Position
   canAttack: boolean = false
   hasAttacked: boolean = false
@@ -120,12 +122,14 @@ class Game {
   }
 
   moveToFuture(entity: Entity, ...options: any[]) {
-    console.log(
-      `MOVE`,
-      entity.position.x + entity.vx * 2,
-      entity.position.y + entity.vy * 2,
-      ...options
-    )
+    let x = entity.position.x + entity.vx * 2
+    let y = entity.position.y + entity.vy * 2
+    if (x < 550) x = 550
+    if (y < 550) y = 550
+    if (x > 17630 - 550) x = 17630 - 550
+    if (y > 9000 - 550) y = 9000 - 550
+    console.error(`MOVE TO FUTURE`, x, y, ...options)
+    console.log(`MOVE`, x, y, ...options)
   }
 
   wait(...options: any[]) {

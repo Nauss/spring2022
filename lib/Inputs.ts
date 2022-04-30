@@ -33,9 +33,11 @@ class Inputs {
     game.health = parseInt(inputs[0])
     game.mana = parseInt(inputs[1])
 
-    // Discard other plater stats for now
+    // Discard other player stats for now
     // @ts-ignore-next-line
     inputs = readline().split(' ')
+    game.enemyHealth = parseInt(inputs[0])
+    game.enemyMana = parseInt(inputs[1])
 
     // @ts-ignore-next-line
     const entityCount = parseInt(readline()) // Amount of heros and monsters you can see
@@ -75,12 +77,14 @@ class Inputs {
         default:
           throw 'Wrong type'
       }
-      game.enemiesInBase = game.enemies.filter(e => e.distance < 5400).length
-      game.enemiesInEnemyBase = game.enemies.filter(
-        e => e.enemyBaseDistance < 5400
-      ).length
     }
+    game.enemiesInBase = [...game.enemies].filter(e => e.distance < 5400).length
+      e => e.enemyBaseDistance < 5400
+    ).length
     game.heroes.forEach(hero => {
+      hero.setSpiders(game.spiders)
+    })
+    game.enemies.forEach(hero => {
       hero.setSpiders(game.spiders)
     })
     const absoluteThreats = game.absoluteThreats(game.spiders)

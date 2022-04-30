@@ -30,7 +30,7 @@ export const moveDefender = (game: Game, hero: Hero) => {
       if (
         shieldLife === 0 &&
         spiderDistance <= ranges.wind &&
-        (game.mana >= 40 || absoluteThreats.length) &&
+        (game.mana >= 40 || (game.mana >= 10 && absoluteThreats.length)) &&
         (health > 6 || absoluteThreats.length) &&
         distance < 3000
       ) {

@@ -1,6 +1,7 @@
 import Game from './lib/Game'
 import Inputs from './lib/Inputs'
 
+// console.error = () => {}
 Inputs.readInit()
 
 // game loop

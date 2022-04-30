@@ -9,7 +9,7 @@ class Hero extends Entity {
   }
 
   setSpiders(spiders: Spider[]) {
-    this.spiders = spiders.filter(
+    this.spiders = [...spiders].filter(
       spider => computeDistance(this.position, spider.position) < 2200
     )
   }

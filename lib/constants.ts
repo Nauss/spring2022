@@ -5,7 +5,7 @@ export const positions = {
 }
 export const ranges = { wind: 1280, shield: 2200, control: 2200 }
 
-export const manaToAttack = 120
+export const manaToAttack = 50
 export const moveStep = 800
 export const windEffect = 2200
 export const hitDistance = 800
