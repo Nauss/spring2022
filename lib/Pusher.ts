@@ -1,41 +1,56 @@
-import { hitDistance, ranges } from './constants'
+import { hitDistance, moveStep, ranges } from './constants'
 import Game from './Game'
 import Hero from './Hero'
 import Spider from './Spider'
-import Entity from './Entity'
-import { computeDistance, Position, random, randomPointOnCircle } from './utils'
+import {
+  computeDistance,
+  Position,
+  random,
+  randomPointToEnemyBase,
+} from './utils'
 
-const castWind = (
-  game: Game,
-  closest: Spider,
-  hero1: Hero,
-  hero2?: Hero,
-  one: boolean = false
-) => {
+const castWind = ({
+  game,
+  closest,
+  hero1,
+  hero2,
+  limit = false,
+  one = false,
+}: {
+  game: Game
+  closest: Spider
+  hero1: Hero
+  hero2?: Hero
+  limit?: boolean
+  one?: boolean
+}) => {
+  const isTopLeft = game.base.x === 0
+  const targetInBase = {
+    x: game.enemyBase.x + (isTopLeft ? -300 : 300),
+    y: game.enemyBase.y + (isTopLeft ? -300 : 300),
+  }
   // Correct the angle
-  // const x = closest.position.x - hero.position.x
-  // const y = hero.position.y - closest.position.y
-  // @Todo isTopLeft
-  const heroX = game.enemyBase.x - hero1.position.x
-  const heroY = game.enemyBase.y - hero1.position.y
+  const heroX = targetInBase.x - hero1.position.x
+  const heroY = targetInBase.y - hero1.position.y
   const angle = Math.atan2(heroY, heroX)
-  const spiderX = game.enemyBase.x - closest.position.x
-  const spiderY = game.enemyBase.y - closest.position.y
+  const spiderX = targetInBase.x - closest.position.x
+  const spiderY = targetInBase.y - closest.position.y
   const spiderAngle = Math.atan2(spiderY, spiderX)
   const diff = spiderAngle - angle
-  const newY = Math.round(heroX * Math.tan(diff))
-  game.castSpell('WIND', game.enemyBase.x, game.enemyBase.y + newY, 'Pusher')
+  const deltaY = Math.round(heroX * Math.tan(diff))
+  game.castSpell('WIND', targetInBase.x, targetInBase.y + deltaY, 'Pusher')
   if (hero2) {
     if (one) {
       game.wait('Pusher')
-    } else {
-      game.castSpell(
-        'WIND',
-        game.enemyBase.x,
-        game.enemyBase.y + newY,
-        'Pusher'
-      )
     }
+    // else {
+    //   game.castSpell(
+    //     'WIND',
+    //     game.enemyBase.x,
+    //     game.enemyBase.y + newY,
+    //     'Pusher'
+    //   )
+    // }
   }
 }
 const castControl = (game: Game, spiderId: number, hero2: Hero) => {
@@ -47,37 +62,32 @@ const castControl = (game: Game, spiderId: number, hero2: Hero) => {
 const castShield = (game: Game, spiderId: number) => {
   game.castSpell('SHIELD', spiderId)
 }
-const move = (game: Game, target: Position, hero2: Hero) => {
-  game.move(target, 'Pusher')
+const move = (game: Game, target: Position, hero1: Hero, hero2: Hero) => {
+  // const newTarget = game.avoidSpiders(hero1, target)
+  const newTarget = target
+  game.move(newTarget, 'Pusher')
   if (hero2) {
-    game.move(target, 'Pusher')
+    game.move(newTarget, 'Pusher')
   }
 }
-const moveToFuture = (game: Game, target: Entity, hero2: Hero) => {
-  let avoidSpider = {
-    x: target.position.x,
-    y: target.position.y,
-  }
-  const nextPosition = {
-    x: target.position.x + avoidSpider.x + target.vx,
-    y: target.position.y + avoidSpider.y + target.vy,
-  }
-  const spiderNextPosition = {
-    x: target.position.x + target.vx,
-    y: target.position.y + target.vy,
-  }
-  const distance = computeDistance(nextPosition, spiderNextPosition)
-  if (distance < hitDistance) {
-    avoidSpider = {
-      x: avoidSpider.x + hitDistance,
-      y: avoidSpider.y + hitDistance,
-    }
-  }
-  game.moveToFuture(target, 'Pusher')
+const moveToSpider = (
+  game: Game,
+  target: Position,
+  hero1: Hero,
+  hero2: Hero
+) => {
+  const newTarget = game.avoidSpiders(hero1, target)
+  game.move(newTarget, 'Pusher')
   if (hero2) {
-    game.moveToFuture(target, 'Pusher')
+    game.move(newTarget, 'Pusher')
   }
 }
+// const moveToFuture = (game: Game, target: Entity, hero2: Hero) => {
+//   game.moveToFuture(target, 'Pusher')
+//   if (hero2) {
+//     game.moveToFuture(target, 'Pusher')
+//   }
+// }
 
 export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
   const byDistance = hero1.spiders
@@ -93,16 +103,42 @@ export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
   const inWindRange = byDistance.filter(
     ({ distance }) => distance <= ranges.wind
   )
+  const inWindRangeNext = byDistance.filter(
+    ({ distance }) => distance <= ranges.wind + moveStep
+  )
   const inShieldRange = byDistance.filter(
     ({ spider, distance }) =>
       spider.shieldLife === 0 && distance <= ranges.shield
   )
+  const inControldRange = byDistance.filter(
+    ({ spider, distance }) =>
+      spider.shieldLife === 0 && distance <= ranges.control
+  )
   if (game.nextMove) {
     const { spell } = game.nextMove
     if (spell === 'MOVE') {
+      // if (hero1.enemyBaseDistance > 3000) {
+      //   console.error('Pusher next move MOVE')
+      //   move(game, game.enemyBase, hero1, hero2)
+      //   game.nextMove = undefined
+      //   return
+      // }
+      if (inWindRange.length && game.mana >= 10) {
+        console.error('Pusher next move WIND')
+        castWind({
+          game,
+          closest: inWindRange[0].spider,
+          hero1,
+          hero2,
+          one: true,
+        })
+        game.nextMove = undefined
+        return
+      }
       if (
         inShieldRange.length &&
-        inShieldRange[0].spider.enemyBaseDistance < 4000 &&
+        inShieldRange[0].spider.enemyBaseDistance < 3500 &&
+        inShieldRange[0].spider.health > 12 &&
         game.mana >= 10
       ) {
         console.error('Pusher next move SHIELD')
@@ -110,7 +146,7 @@ export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
         if (hero2) {
           if (
             inShieldRange.length > 1 &&
-            inShieldRange[1].spider.enemyBaseDistance < 4000
+            inShieldRange[1].spider.enemyBaseDistance < 3500
           ) {
             console.error('Pusher next move SHIELD 2')
             castShield(game, inShieldRange[1].spider.id)
@@ -122,27 +158,13 @@ export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
         game.nextMove = undefined
         return
       }
-      if (inWindRange.length && game.mana >= 10) {
-        console.error('Pusher next move WIND')
-        castWind(game, inWindRange[0].spider, hero1, hero2)
-        game.nextMove = undefined
-        return
-      }
-      console.error('Pusher next move MOVE')
-      move(game, game.enemyBase, hero2)
-      if (hero1.enemyBaseDistance > 4200) {
-        game.nextMove = { spell: 'MOVE' }
-      } else {
-        game.nextMove = undefined
-      }
-      return
     } else if (spell === 'CONTROL') {
       console.error('Pusher next move CONTROL')
       castControl(game, game.nextMove.enemyId, hero2)
       const closestEnemy = game.enemies.find(
         enemy => enemy.id === game.nextMove.enemyId
       )
-      if (closestEnemy.enemyBaseDistance > 4000 || game.mana < 20) {
+      if (closestEnemy.enemyBaseDistance > 4000 || game.mana < 10) {
         game.nextMove = undefined
       }
       return
@@ -172,13 +194,16 @@ export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
   //   }
   // }
   // Go towards enemy base
-  if (hero1.enemyBaseDistance > 9000) {
+  if (hero1.enemyBaseDistance > 8000) {
     if (
       inWindRange.some(({ spider, distance }) => {
         if (
+          game.mana >= 60 &&
+          distance > hitDistance &&
           distance < ranges.control &&
           spider.threatFor !== 2 &&
-          spider.distance > 9500
+          spider.distance > 9500 &&
+          spider.health >= 12
         ) {
           console.error('Pusher towards enemy base control')
           castControl(game, spider.id, hero2)
@@ -190,25 +215,51 @@ export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
       return
     }
     console.error('Pusher towards enemy base')
-    move(game, game.enemyBase, hero2)
+    move(game, game.enemyBase, hero1, hero2)
+    return
+  }
+  // Try to stack the spiders
+  if (inWindRange.length && inWindRange.length < inWindRangeNext.length) {
+    const spider = inWindRangeNext[inWindRange.length].spider
+    move(
+      game,
+      {
+        x: Math.round(spider.position.x + spider.vx * 2.2),
+        y: Math.round(spider.position.y + spider.vy * 2.2),
+      },
+      hero1,
+      hero2
+    )
     return
   }
   // Find the spider closest to the enemy base
-  if (inWindRange.length >= 1) {
-    const closestToEnemyBase = inWindRange.sort((a, b) => {
+  if (
+    (inWindRange.length >= 1 &&
+      inWindRange[0].spider.enemyBaseDistance < 6500) ||
+    inWindRange.length >= 2
+  ) {
+    const { spider } = inWindRange.sort((a, b) => {
       if (a.spider.enemyBaseDistance < b.spider.enemyBaseDistance) return -1
       if (a.spider.enemyBaseDistance > b.spider.enemyBaseDistance) return 1
       return 0
     })[0]
-    if (game.mana >= 20) {
+    if (game.mana >= 10) {
       if (
-        closestToEnemyBase.spider.enemyBaseDistance < 7000
+        spider.enemyBaseDistance < 6500 &&
+        spider.shieldLife === 0
         // &&
-        // (closestToEnemyBase.spider.health >= 12 ||
-        //   closestToEnemyBase.spider.enemyBaseDistance < 4000)
+        // (spider.health >= 12 ||
+        //   spider.enemyBaseDistance < 4000)
       ) {
         console.error('Pusher closest wind')
-        castWind(game, closestToEnemyBase.spider, hero1, hero2, true)
+        castWind({
+          game,
+          closest: spider,
+          hero1,
+          hero2,
+          one: true,
+          limit: true,
+        })
         game.nextMove = {
           spell: 'MOVE',
         }
@@ -216,73 +267,96 @@ export const movePusher = (game: Game, hero1: Hero, hero2?: Hero) => {
       }
     }
   }
-  if (byDistance.length) {
-    const { spider, distance } = byDistance[0]
-    if (distance > ranges.wind) {
-      console.error('Pusher moveToFuture to closest')
-      moveToFuture(game, spider, hero2)
-      return
-    }
-  }
   // Control
-  const enemyThreats = hero1.spiders.filter(spider => {
-    return spider.threatFor === 2 && spider.distance < 4000
-  })
-  if (enemyThreats.length >= 3) {
-    const enemyInBase = game.enemies.filter(enemy => {
-      return enemy.enemyBaseDistance < 4000
+  if (
+    inControldRange.some(({ spider }) => {
+      if (spider.threatFor !== 2 && spider.health < 14 && game.mana >= 20) {
+        console.error('Pusher control spider')
+        castControl(game, spider.id, hero2)
+        // game.nextMove = {
+        //   spell: 'CONTROL',
+        //   enemyId: spider.id,
+        // }
+        return true
+      }
     })
-    if (enemyInBase.length) {
-      const closestEnemy = enemyInBase.sort((a, b) => {
-        const aDistance = computeDistance(hero1.position, a.position)
-        const bDistance = computeDistance(hero1.position, b.position)
-        if (aDistance < bDistance) return -1
-        if (aDistance > bDistance) return 1
-        return 0
-      })[0]
-      const distance = computeDistance(hero1.position, closestEnemy.position)
-      if (distance < ranges.control && game.mana >= 20) {
-        console.error('Pusher control enemy')
-        castControl(game, closestEnemy.id, hero2)
-        game.nextMove = {
-          spell: 'CONTROL',
-          enemyId: closestEnemy.id,
-        }
+  ) {
+    return
+  }
+
+  // Wait if spiders are close and coming
+  // if (
+  //   hero1.spiders.some(spider => {
+  //     const distance = computeDistance(spider.position, hero1.position)
+  //     const nextDistance = computeDistance(
+  //       {
+  //         x: spider.position.x + spider.vx,
+  //         y: spider.position.y + spider.vy,
+  //       },
+  //       hero1.position
+  //     )
+  //     if (spider.enemyBaseDistance < 5000 && nextDistance <= ranges.wind) {
+  //       game.wait('Pusher')
+  //       return true
+  //     }
+  //   })
+  // ) {
+  //   return
+  // }
+
+  if (byDistance.length) {
+    const closest = byDistance[0]
+    const enemiesInSpiderRange = game.enemies.filter(enemy => {
+      const distance = computeDistance(enemy.position, closest.spider.position)
+      return distance <= 800
+    })
+    const nbTurnsToBase = game.turnToBase(closest.spider)
+    const nextDistance =
+      computeDistance(closest.spider.position, hero1.position) - 800
+    if (
+      closest.spider.shieldLife === 0 &&
+      nextDistance > 800 &&
+      closest.spider.health >
+        (enemiesInSpiderRange.length
+          ? enemiesInSpiderRange.length * nbTurnsToBase * 2
+          : 0)
+    ) {
+      const nextSpiderPosition = {
+        x: closest.spider.position.x,
+        y: closest.spider.position.y,
+      }
+      // if (game.base.x !== 0) {
+      //   position = {
+      //     x: closest.spider.position.x + (closest.spider.vx + 200),
+      //     y: closest.spider.position.y + (closest.spider.vy + 200),
+      //   }
+      // }
+      // const nextDistance =
+      //   computeDistance(nextSpiderPosition, hero1.position) - 800
+      // const restricted =
+      //   nextDistance <= 800
+      //     ? game.restrictDistance(hero1.position, nextSpiderPosition, 780)
+      //     : nextSpiderPosition
+      const restricted = game.restrictDistance(
+        hero1.position,
+        nextSpiderPosition,
+        780
+      )
+      console.error({
+        // nextDistance,
+        spiderPosition: closest.spider.position,
+        nextSpiderPosition,
+        restricted,
+      })
+      const nextEnemyBaseDistance = computeDistance(restricted, game.enemyBase)
+      if (nextEnemyBaseDistance < 7500) {
+        game.move(restricted, 'Pusher to closest restricted')
         return
       }
     }
   }
-  // // @Todo Determine the future position of the spider
-  // const destination = {
-  //   x: spider.position.x + spider.vx,
-  //   y: spider.position.y + spider.vy,
-  // }
-  // game.move(destination, 'Pusher')
-  // game.move(destination, 'Pusher')
-  // return
-  const position = randomPointOnCircle(game.enemyBase, 6000)
-  console.error('Pusher move random')
-  move(game, position, hero2)
+
+  // Go to random point
+  randomPointToEnemyBase(game, hero1, hero2)
   return
-  // // Out of the base
-  // if (hero1.enemyBaseDistance < 4000) {
-  //   game.move(game.base, 'Pusher')
-  //   game.move(game.base, 'Pusher')
-  //   return
-  // }
-
-  // // New random position close by
-  // const destination = {
-  //   x: random({
-  //     min: hero1.position.x - ranges.wind / 2,
-  //     max: hero1.position.x + ranges.wind / 2,
-  //   }),
-  //   y: random({
-  //     min: hero1.position.y - ranges.wind / 2,
-  //     max: hero1.position.y + ranges.wind / 2,
-  //   }),
-  // }
-
-  // game.move(destination, 'Pusher')
-  // game.move(destination, 'Pusher')
 }

@@ -146,7 +146,7 @@ export const moveAttacker = (game: Game, hero: Hero) => {
     return
   }
 
-  if (game.avoidSpiders(hero)) {
+  if (game.avoidSpiders_old(hero)) {
     return
   }
 

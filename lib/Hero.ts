@@ -4,6 +4,7 @@ import { computeDistance } from './utils'
 
 class Hero extends Entity {
   spiders: Spider[] = []
+  castWind: boolean = false
   constructor(info: EntityInfo) {
     super(info)
   }

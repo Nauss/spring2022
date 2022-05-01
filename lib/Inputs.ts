@@ -78,8 +78,9 @@ class Inputs {
           throw 'Wrong type'
       }
     }
-    game.enemiesInBase = [...game.enemies].filter(e => e.distance < 5400).length
-      e => e.enemyBaseDistance < 5400
+    game.enemiesInBase = game.enemies.filter(e => e.distance < 5400).length
+    game.enemiesInEnemyBase = game.enemies.filter(
+      e => e.enemyBaseDistance < 4500
     ).length
     game.heroes.forEach(hero => {
       hero.setSpiders(game.spiders)
@@ -89,12 +90,14 @@ class Inputs {
     })
     const absoluteThreats = game.absoluteThreats(game.spiders)
     if (
-      (game.mana >= manaToAttack ||
-        (game.hasAttacked && game.mana >= manaToAttack - 40)) &&
+      (game.mana >= manaToAttack || (game.hasAttacked && game.mana >= 20)) &&
       absoluteThreats.length === 0
     ) {
       game.canAttack = true
       game.hasAttacked = true
+    }
+    if (game.health <= 2) {
+      game.shouldDefend = true
     }
   }
 }

@@ -1,7 +1,7 @@
 import { ranges } from './constants'
 import Game from './Game'
 import Hero from './Hero'
-import { computeDistance, random, randomPointOnCircle } from './utils'
+import { computeDistance, random, randomPointToEnemyBase } from './utils'
 
 const farmPositions = {
   topLeft: {
@@ -20,8 +20,8 @@ const farmPositions = {
   },
   bottomRight: {
     0: {
-      x: 11000,
-      y: 6500,
+      x: 10000,
+      y: 7500,
     },
     1: {
       x: 12000,
@@ -50,7 +50,7 @@ export const moveFarmer = (game: Game, hero: Hero) => {
     }
   }
   // Go to closest threat
-  const byBaseDistance = hero.spiders
+  const byBaseDistance = game.spiders
     .sort((a, b) => {
       if (a.distance < b.distance) return -1
       if (a.distance > b.distance) return 1
@@ -59,9 +59,21 @@ export const moveFarmer = (game: Game, hero: Hero) => {
     .filter(({ threatFor }) => threatFor === 1)
   if (byBaseDistance.length) {
     const closest = byBaseDistance[0]
-    console.error('Farmer to closest threat')
-    game.moveToFuture(closest, 'Farmer')
-    return
+    const closestHero = game.heroes
+      .map(hero => ({
+        hero,
+        distance: computeDistance(hero.position, closest.position),
+      }))
+      .sort((a, b) => {
+        if (a.distance < b.distance) return -1
+        if (a.distance > b.distance) return 1
+        return 0
+      })[0]
+    if (closestHero.hero.id === hero.id) {
+      console.error('Farmer to closest threat')
+      game.moveToFuture(closest, 'Farmer')
+      return
+    }
   }
   // Go to closest spider
   const byDistance = hero.spiders

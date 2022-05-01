@@ -3,9 +3,9 @@ export const positions = {
   bottomRight: { x: 17629, y: 8999 },
   center: { x: 9000, y: 4500 },
 }
-export const ranges = { wind: 1280, shield: 2200, control: 2200 }
+export const ranges = { wind: 1280, shield: 2200, control: 2200, hit: 800 }
 
-export const manaToAttack = 50
+export const manaToAttack = 90
 export const moveStep = 800
 export const windEffect = 2200
-export const hitDistance = 800
+export const hitDistance = ranges.hit

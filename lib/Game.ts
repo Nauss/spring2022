@@ -1,5 +1,5 @@
 import { moveAttacker } from './Attacker'
-import { manaToAttack, ranges } from './constants'
+import { hitDistance, manaToAttack, ranges } from './constants'
 import { moveDefender } from './Defender'
 import { moveFarmer } from './Farmer'
 import Hero from './Hero'
@@ -17,6 +17,7 @@ class Game {
   enemyMana: number
   enemyBase: Position
   canAttack: boolean = false
+  shouldDefend: boolean = false
   hasAttacked: boolean = false
   enemiesInBase: number = 0
   enemiesInEnemyBase: number = 0
@@ -26,7 +27,9 @@ class Game {
   enemies: Hero[] = []
 
   previousHeroes: Hero[] = []
-  nextMove: { spell?: string; enemyId?: number } = {}
+  nextMove: any = {}
+
+  pusherPatrol: { close: number[]; far: number[] } = { close: [], far: [] }
 
   static defender = {
     index: 0,
@@ -103,7 +106,11 @@ class Game {
       if (this.hasAttacked) {
         moveDefender(this, this.heroes[Game.defender.index])
         moveDefender(this, this.heroes[Game.libero.index])
-        moveDefender(this, this.heroes[Game.attacker.index])
+        movePusher(
+          this,
+          // this.heroes[Game.libero.index],
+          this.heroes[Game.attacker.index]
+        )
       } else {
         moveFarmer(this, this.heroes[Game.defender.index])
         moveFarmer(this, this.heroes[Game.libero.index])
@@ -118,12 +125,18 @@ class Game {
   }
 
   move(position: Position, ...options: any[]) {
-    console.log(`MOVE`, position.x, position.y, ...options)
+    let x = position.x
+    let y = position.y
+    if (x < 550) x = 550
+    if (y < 550) y = 550
+    if (x > 17630 - 550) x = 17630 - 550
+    if (y > 9000 - 550) y = 9000 - 550
+    console.log(`MOVE`, x, y, ...options)
   }
 
   moveToFuture(entity: Entity, ...options: any[]) {
-    let x = entity.position.x + entity.vx * 2
-    let y = entity.position.y + entity.vy * 2
+    let x = Math.round(entity.position.x + entity.vx * 1.9)
+    let y = Math.round(entity.position.y + entity.vy * 1.9)
     if (x < 550) x = 550
     if (y < 550) y = 550
     if (x > 17630 - 550) x = 17630 - 550
@@ -137,7 +150,7 @@ class Game {
   }
 
   moveToClosestSpider(hero: Hero, ...options: any[]) {
-    if (this.spiders.length) {
+    if (hero.spiders.length) {
       let closest = this.spiders[0]
       let closestDistance = computeDistance(hero.position, closest.position)
       this.spiders.forEach(spider => {
@@ -155,7 +168,70 @@ class Game {
     return false
   }
 
-  avoidSpiders(hero: Hero) {
+  restrictDistance = (
+    position: Position,
+    target: Position,
+    distance: number
+  ) => {
+    const newX = target.x - position.x
+    const newY = target.y - position.y
+    const a = newY / newX
+    const x = Math.sqrt((distance * distance) / (a * a + 1))
+    const y = a * x
+    let result = { x: position.x, y: position.y }
+    if (newX > 0) {
+      result.x += x
+    } else {
+      result.x -= x
+    }
+    if (newY > 0) {
+      result.y += y
+    } else {
+      result.y -= y
+    }
+    console.error('restrictDistance', {
+      position,
+      target,
+      distance,
+      newX,
+      newY,
+      a,
+      x,
+      y,
+      result,
+      newDistance: computeDistance(position, result),
+    })
+    return { x: Math.round(result.x), y: Math.round(result.y) }
+  }
+
+  avoidSpiders = (hero: Hero, target: Position) => {
+    let newTarget = this.restrictDistance(hero.position, target, 800)
+    hero.spiders.forEach(spider => {
+      const spiderNextPosition = {
+        x: spider.position.x + spider.vx,
+        y: spider.position.y + spider.vy,
+      }
+      const nextDistance = computeDistance(spiderNextPosition, newTarget)
+      if (nextDistance <= hitDistance) {
+        newTarget = this.restrictDistance(
+          hero.position,
+          newTarget,
+          hitDistance + 1 - nextDistance
+        )
+      }
+    })
+    console.error(`AVOID SPIDERS`, {
+      hero: hero.position,
+      target,
+      newTarget,
+    })
+    return {
+      x: Math.round(newTarget.x),
+      y: Math.round(newTarget.y),
+    }
+  }
+
+  avoidSpiders_old(hero: Hero) {
     if (this.spiders.length) {
       const isTopLeft = this.base.x === 0
       if (
@@ -235,14 +311,23 @@ class Game {
   }
   absoluteThreats(spiders: Spider[]) {
     return spiders.filter(spider => {
+      const nbHitters = this.heroes.filter(hero => {
+        const distance = computeDistance(hero.position, spider.position)
+        return distance <= ranges.hit
+      }).length
       if (
         spider.threatFor === 1 &&
-        spider.distance < (400 * spider.health) / 2
+        spider.distance <
+          (400 * spider.health) / (nbHitters ? 2 * nbHitters : 2)
       ) {
         return true
       }
       return false
     })
+  }
+
+  turnToBase(spider: Spider) {
+    return Math.floor((spider.distance - 300) / 400)
   }
 }
 
